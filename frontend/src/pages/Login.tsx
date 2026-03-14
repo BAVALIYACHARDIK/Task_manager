@@ -1,21 +1,36 @@
-import React, { use, useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { login } from '../controller/authController';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // No API call as requested - just log the values
-    
-    navigate('/dashboard');
 
-    console.log('Login attempt:', { email, password });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { token } = await login({ email, password });
+
+      // Store the token for subsequent API calls
+      localStorage.setItem('authToken', token);
+
+      // Navigate to the protected dashboard
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,12 +72,19 @@ const Login = () => {
               />
             </div>
 
+            {error && (
+              <div className="text-sm text-red-600 dark:text-red-400">
+                {error}
+              </div>
+            )}
+
             <Button 
               type="submit" 
               className="w-full"
               size="lg"
+              disabled={loading}
             >
-              Sign In
+              {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
         </CardContent>

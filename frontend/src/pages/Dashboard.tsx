@@ -11,7 +11,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { BarChart3, Users, LogOut, Home, Settings, HelpCircle } from "lucide-react";
 
 const Dashboard = () => {
