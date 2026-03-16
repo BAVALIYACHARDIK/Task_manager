@@ -6,7 +6,7 @@
 import { get, post, put, deleteRequest, patch, ApiResponse } from './apiService';
 
 export type Task = {
-  id: string;
+  id: number;
   title: string;
   description?: string;
   status: TaskStatus;
@@ -39,14 +39,46 @@ export type UpdateTaskRequest = Partial<CreateTaskRequest> & {
  * Fetch all tasks
  */
 export const getAllTasks = async (): Promise<ApiResponse<Task[]>> => {
-  return get<Task[]>('/api/tasks');
+  const response = await get<any>('/api/tasks');
+  
+  if (response.success && response.data) {
+    // Backend returns nested response: { success, code, data: [...], message }
+    // Extract the actual tasks array from response.data.data
+    const tasksArray = response.data.data || response.data;
+    
+    return {
+      success: response.success,
+      data: Array.isArray(tasksArray) ? tasksArray : [],
+      error: response.error,
+    };
+  }
+
+  return {
+    success: false,
+    data: [],
+    error: response.error || 'Failed to fetch tasks',
+  };
 };
 
 /**
  * Fetch a single task by ID
  */
-export const getTaskById = async (taskId: string): Promise<ApiResponse<Task>> => {
-  return get<Task>(`/api/tasks/${taskId}`);
+export const getTaskById = async (taskId: string | number): Promise<ApiResponse<Task>> => {
+  const response = await get<any>(`/api/tasks/${taskId}`);
+  
+  if (response.success && response.data) {
+    const taskData = response.data.data || response.data;
+    return {
+      success: response.success,
+      data: taskData,
+      error: response.error,
+    };
+  }
+
+  return {
+    success: false,
+    error: response.error || 'Failed to fetch task',
+  };
 };
 
 /**
@@ -62,33 +94,75 @@ export const createTask = async (taskData: CreateTaskRequest): Promise<ApiRespon
     };
   }
 
-  return post<Task>('/api/tasks', taskData);
+  const response = await post<any>('/api/tasks', taskData);
+  
+  if (response.success && response.data) {
+    const taskData = response.data.data || response.data;
+    return {
+      success: response.success,
+      data: taskData,
+      error: response.error,
+    };
+  }
+
+  return {
+    success: false,
+    error: response.error || 'Failed to create task',
+  };
 };
 
 /**
  * Update an existing task
  */
 export const updateTask = async (
-  taskId: string,
+  taskId: string | number,
   taskData: UpdateTaskRequest
 ): Promise<ApiResponse<Task>> => {
-  return put<Task>(`/api/tasks/${taskId}`, taskData);
+  const response = await put<any>(`/api/tasks/${taskId}`, taskData);
+  
+  if (response.success && response.data) {
+    const updatedTask = response.data.data || response.data;
+    return {
+      success: response.success,
+      data: updatedTask,
+      error: response.error,
+    };
+  }
+
+  return {
+    success: false,
+    error: response.error || 'Failed to update task',
+  };
 };
 
 /**
  * Update task status
  */
 export const updateTaskStatus = async (
-  taskId: string,
+  taskId: string | number,
   status: TaskStatus
 ): Promise<ApiResponse<Task>> => {
-  return patch<Task>(`/api/tasks/${taskId}/status`, { status });
+  const response = await patch<any>(`/api/tasks/${taskId}/status`, { status });
+  
+  if (response.success && response.data) {
+    const taskData = response.data.data || response.data;
+    return {
+      success: response.success,
+      data: taskData,
+      error: response.error,
+    };
+  }
+
+  return {
+    success: false,
+    error: response.error || 'Failed to update task status',
+  };
 };
 
 /**
  * Delete a task
  */
-export const deleteTask = async (taskId: string): Promise<ApiResponse<void>> => {
+export const deleteTask = async (taskId: string | number): Promise<ApiResponse<void>> => {
   return deleteRequest(`/api/tasks/${taskId}`);
 };
 

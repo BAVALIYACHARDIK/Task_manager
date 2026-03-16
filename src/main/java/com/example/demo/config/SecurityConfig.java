@@ -48,17 +48,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow your specific React frontend URL
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        // Allow your specific React frontend URLs (supports both dev ports)
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:5173"));
 
         // Allow common HTTP methods
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 
         // Allow all headers (Authorization, Content-Type, etc.)
         configuration.setAllowedHeaders(Arrays.asList("*"));
 
+        // Expose headers that JavaScript can access
+        configuration.setExposedHeaders(Arrays.asList("Content-Type", "Authorization", "X-Requested-With"));
+
         // Allow credentials (needed if you use cookies or specific auth headers)
         configuration.setAllowCredentials(true);
+
+        // Set max age for preflight cache
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // Apply these settings to ALL endpoints

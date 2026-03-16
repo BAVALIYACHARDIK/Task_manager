@@ -10,6 +10,12 @@ export type LoginCredentials = {
   password: string;
 };
 
+export type SignupCredentials = {
+  email: string;
+  password: string;
+  fullName: string;
+};
+
 export type AuthResponse = {
   success: boolean;
   token?: string;
@@ -50,6 +56,31 @@ export const validateCredentials = (credentials: LoginCredentials): { valid: boo
 
   if (!validatePassword(password)) {
     return { valid: false, error: 'Password must be at least 6 characters' };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * Validate signup credentials
+ */
+export const validateSignupCredentials = (credentials: SignupCredentials): { valid: boolean; error?: string } => {
+  const { email, password, fullName } = credentials;
+
+  if (!email || !password || !fullName) {
+    return { valid: false, error: 'All fields are required' };
+  }
+
+  if (!validateEmail(email)) {
+    return { valid: false, error: 'Please enter a valid email address' };
+  }
+
+  if (!validatePassword(password)) {
+    return { valid: false, error: 'Password must be at least 6 characters' };
+  }
+
+  if (fullName.trim().length === 0) {
+    return { valid: false, error: 'Full name cannot be empty' };
   }
 
   return { valid: true };
@@ -119,6 +150,13 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       password: credentials.password,
     });
 
+    console.log('Login Service Response:', {
+      success: response.success,
+      message: response.message,
+      hasToken: !!response.token,
+      hasUser: !!response.user,
+    });
+
     if (response && response.token) {
       // Store token and user data
       storeAuthToken(response.token);
@@ -140,6 +178,7 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during login';
+    console.error('Login Service Error:', errorMessage);
     return {
       success: false,
       error: errorMessage,
@@ -152,6 +191,63 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
  */
 export const logout = (): void => {
   clearAuthData();
+};
+
+/**
+ * Signup user with email, password, and full name
+ */
+export const signup = async (credentials: SignupCredentials): Promise<AuthResponse> => {
+  try {
+    // Validate credentials
+    const validation = validateSignupCredentials(credentials);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: validation.error,
+      };
+    }
+
+    // Call API through controller
+    const response = await authController.signup({
+      email: credentials.email,
+      password: credentials.password,
+      fullName: credentials.fullName,
+    });
+
+    console.log('Signup Service Response:', {
+      success: response.success,
+      message: response.message,
+      hasToken: !!response.token,
+      hasUser: !!response.user,
+    });
+
+    if (response && response.token) {
+      // Store token and user data
+      storeAuthToken(response.token);
+      
+      // Store additional user data if available
+      if (response.user) {
+        storeUserData(response.user);
+      }
+
+      return {
+        success: true,
+        token: response.token,
+      };
+    } else {
+      return {
+        success: false,
+        error: response?.message || 'Signup failed',
+      };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred during signup';
+    console.error('Signup Service Error:', errorMessage);
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
 };
 
 /**

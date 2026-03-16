@@ -46,19 +46,36 @@ export const apiRequest = async <T = any>(
 ): Promise<ApiResponse<T>> => {
   try {
     const { method = 'GET', headers = {}, body } = options;
+    const fullHeaders = getHeaders(headers);
+
+    // Log request details for debugging
+    console.log(`🔵 API Request [${method}] ${endpoint}`, {
+      headers: fullHeaders,
+      body: body ? JSON.stringify(body) : undefined,
+    });
 
     const response = await fetch(`${API_BASE}${endpoint}`, {
       method,
-      headers: getHeaders(headers),
+      headers: fullHeaders,
       body: body ? JSON.stringify(body) : undefined,
     });
 
     const responseData = await response.json().catch(() => null);
 
+    // Log all responses for debugging
+    console.log(`🟢 API Response [${method}] ${endpoint}:`, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        contentType: response.headers.get('Content-Type'),
+      },
+      data: responseData,
+    });
+
     if (!response.ok) {
       return {
         success: false,
-        error: responseData?.message || `HTTP Error: ${response.status}`,
+        error: responseData?.message || `HTTP Error: ${response.status} - ${response.statusText}`,
         status: response.status,
       };
     }
@@ -70,6 +87,7 @@ export const apiRequest = async <T = any>(
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    console.error('🔴 API Request Error:', errorMessage);
     return {
       success: false,
       error: errorMessage,

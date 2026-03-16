@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -11,39 +12,43 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Users, LogOut, Home, Settings, HelpCircle } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BarChart3, Users, LogOut, Home, Settings, HelpCircle, LayoutGrid } from "lucide-react";
+import KanbanBoard from "../components/KanbanBoard.tsx";
+import ActivityLog from "../components/ActivityLog.tsx";
+import { getAllMembers, Member } from "../service/userService";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("home");
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Sample team members data
-  const teamMembers = [
-    { id: 1, name: "John Doe", status: "Online", avatar: "JD" },
-    { id: 2, name: "Jane Smith", status: "Busy", avatar: "JS" },
-    { id: 3, name: "Mike Johnson", status: "Away", avatar: "MJ" },
-    { id: 4, name: "Sarah Wilson", status: "Online", avatar: "SW" },
-  ];
-
-  // Sample activity logs
-  const activityLogs = [
-    { id: 1, user: "John Doe", action: "Created new task", time: "2 hours ago" },
-    { id: 2, user: "Jane Smith", action: "Updated task status", time: "1 hour ago" },
-    { id: 3, user: "Mike Johnson", action: "Added comment", time: "30 minutes ago" },
-    { id: 4, user: "Sarah Wilson", action: "Assigned task", time: "15 minutes ago" },
-  ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "Online":
-        return "bg-green-500";
-      case "Busy":
-        return "bg-yellow-500";
-      case "Away":
-        return "bg-gray-500";
-      default:
-        return "bg-gray-400";
+  const fetchMembers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getAllMembers();
+      
+      if (response.success && response.data) {
+        setMembers(response.data);
+      } else {
+        setError(response.error || "Failed to fetch members");
+      }
+    } catch (err) {
+      setError("An error occurred while fetching members");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (activeTab === "members") {
+      fetchMembers();
+    }
+  }, [activeTab]);
 
   return (
     <SidebarProvider>
@@ -73,12 +78,23 @@ const Dashboard = () => {
 
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={activeTab === "team"}
-                  onClick={() => setActiveTab("team")}
+                  isActive={activeTab === "board"}
+                  onClick={() => setActiveTab("board")}
+                  className="cursor-pointer"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                  <span>Board</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={activeTab === "members"}
+                  onClick={() => setActiveTab("members")}
                   className="cursor-pointer"
                 >
                   <Users className="h-4 w-4" />
-                  <span>Team Members</span>
+                  <span>Members</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
@@ -125,11 +141,13 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold">
               {activeTab === "home"
                 ? "Dashboard"
-                : activeTab === "team"
-                  ? "Team Members"
-                  : activeTab === "logs"
-                    ? "Activity Logs"
-                    : "Settings"}
+                : activeTab === "board"
+                  ? "Task Board"
+                  : activeTab === "members"
+                    ? "Members"
+                    : activeTab === "logs"
+                      ? "Activity Logs"
+                      : "Settings"}
             </h2>
           </div>
 
@@ -166,65 +184,87 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Team Members Tab */}
-            {activeTab === "team" && (
-              <div className="space-y-4">
-                <div className="rounded-lg border bg-white shadow-sm">
-                  <div className="border-b p-4">
-                    <h3 className="font-semibold">Team Members Status</h3>
+            {/* Board Tab (Kanban Board) */}
+            {activeTab === "board" && (
+              <KanbanBoard />
+            )}
+
+            {/* Members Tab */}
+            {activeTab === "members" && (
+              <div className="space-y-6">
+                {loading && (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading members...</p>
+                    </div>
                   </div>
-                  <div className="divide-y">
-                    {teamMembers.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between p-4 hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold">
-                            {member.avatar}
-                          </div>
-                          <div>
-                            <p className="font-medium">{member.name}</p>
-                            <p className="text-sm text-gray-500">{member.status}</p>
-                          </div>
-                        </div>
-                        <Badge
-                          className={`text-white ${getStatusColor(member.status)}`}
-                        >
-                          <span className="mr-2 inline-block h-2 w-2 rounded-full bg-white"></span>
-                          {member.status}
-                        </Badge>
-                      </div>
-                    ))}
+                )}
+
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <p className="text-red-800">{error}</p>
+                    <button
+                      onClick={fetchMembers}
+                      className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      Retry
+                    </button>
                   </div>
-                </div>
+                )}
+
+                {!loading && !error && members.length === 0 && (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No members found</p>
+                  </div>
+                )}
+
+                {!loading && !error && members.length > 0 && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {members.map((member) => (
+                        <Card key={member.id} className="hover:shadow-lg transition-shadow">
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <CardTitle className="text-lg">
+                                  {member.firstName} {member.lastName}
+                                </CardTitle>
+                                <CardDescription className="text-sm truncate">
+                                  {member.email}
+                                </CardDescription>
+                              </div>
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                                {member.firstName.charAt(0)}
+                                {member.lastName.charAt(0)}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">Active</Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-blue-900 font-semibold">
+                        Total Members: <span className="text-2xl">{members.length}</span>
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
             {/* Activity Logs Tab */}
             {activeTab === "logs" && (
               <div className="space-y-4">
-                <div className="rounded-lg border bg-white shadow-sm">
-                  <div className="border-b p-4">
-                    <h3 className="font-semibold">Recent Activity</h3>
-                  </div>
-                  <div className="divide-y">
-                    {activityLogs.map((log) => (
-                      <div key={log.id} className="flex items-start justify-between p-4">
-                        <div className="flex flex-1 gap-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-xs font-semibold">
-                            {log.user.split(" ").map((n) => n[0]).join("")}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium">{log.user}</p>
-                            <p className="text-sm text-gray-600">{log.action}</p>
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-500">{log.time}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <ActivityLog limit={20} />
               </div>
             )}
 

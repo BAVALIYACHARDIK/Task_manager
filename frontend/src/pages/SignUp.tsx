@@ -4,14 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { login, validateEmail, validatePassword } from '../service/authService';
+import { signup, validateEmail, validatePassword } from '../service/authService';
 
-const Login = () => {
+const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+    fullName?: string;
+  }>({});
   const navigate = useNavigate();
 
   /**
@@ -40,11 +45,21 @@ const Login = () => {
       }
     }
 
+    if (field === 'fullName') {
+      if (!value) {
+        errors.fullName = 'Full name is required';
+      } else if (value.trim().length === 0) {
+        errors.fullName = 'Full name cannot be empty';
+      } else {
+        delete errors.fullName;
+      }
+    }
+
     setFieldErrors(errors);
   };
 
   /**
-   * Handle email input change
+   * Handle input changes
    */
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -52,13 +67,16 @@ const Login = () => {
     validateField('email', value);
   };
 
-  /**
-   * Handle password input change
-   */
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setPassword(value);
     validateField('password', value);
+  };
+
+  const handleFullNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFullName(value);
+    validateField('fullName', value);
   };
 
   /**
@@ -71,6 +89,7 @@ const Login = () => {
     // Validate all fields
     validateField('email', email);
     validateField('password', password);
+    validateField('fullName', fullName);
 
     if (Object.keys(fieldErrors).length > 0) {
       return;
@@ -79,15 +98,19 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // Call login service with business logic
-      const result = await login({ email, password });
+      // Call signup service with business logic
+      const result = await signup({
+        email,
+        password,
+        fullName,
+      });
 
       if (result.success) {
-        // Navigate to the protected dashboard on successful login
+        // Navigate to dashboard on successful signup
         navigate('/dashboard');
       } else {
         // Display error message from service
-        setError(result.error || 'Login failed');
+        setError(result.error || 'Signup failed');
       }
     } finally {
       setLoading(false);
@@ -99,11 +122,34 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
-            Sign In to Your Account
+            Create Your Account
           </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">
+            Join us to start managing your tasks
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Full Name Field */}
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                placeholder="Enter your full name"
+                value={fullName}
+                onChange={handleFullNameChange}
+                required
+                className={`w-full ${fieldErrors.fullName ? 'border-red-500' : ''}`}
+              />
+              {fieldErrors.fullName && (
+                <p className="text-sm text-red-600 dark:text-red-400">
+                  {fieldErrors.fullName}
+                </p>
+              )}
+            </div>
+
+            {/* Email Field */}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -122,12 +168,13 @@ const Login = () => {
               )}
             </div>
 
+            {/* Password Field */}
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter your password (min. 6 characters)"
                 value={password}
                 onChange={handlePasswordChange}
                 required
@@ -140,29 +187,31 @@ const Login = () => {
               )}
             </div>
 
+            {/* Error Message */}
             {error && (
               <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded">
                 {error}
               </div>
             )}
 
+            {/* Sign Up Button */}
             <Button
               type="submit"
               className="w-full"
               size="lg"
               disabled={loading || Object.keys(fieldErrors).length > 0}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Creating account...' : 'Sign Up'}
             </Button>
 
-            {/* Link to Sign Up */}
+            {/* Link to Login */}
             <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
+              Already have an account?{' '}
               <Link
-                to="/auth/signup"
+                to="/login"
                 className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
               >
-                Sign Up
+                Sign In
               </Link>
             </div>
           </form>
@@ -172,4 +221,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default SignUp;

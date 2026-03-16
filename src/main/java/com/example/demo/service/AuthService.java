@@ -2,6 +2,8 @@ package com.example.demo.service;
 
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.Loginresponse;
+import com.example.demo.dto.SignupRequest;
+import com.example.demo.dto.SignupResponse;
 import com.example.demo.model.User;
 import com.example.demo.repository.AuthRepository;
 import io.jsonwebtoken.Jwts;
@@ -102,8 +104,82 @@ public class AuthService {
     }
 
     /**
-     * Generate JWT token for authenticated user.
+     * Register a new user with email, password, and full name.
+     * Validates that user doesn't exist and creates a new user account.
      */
+    public SignupResponse signup(SignupRequest signupRequest) {
+        SignupResponse response = new SignupResponse();
+
+        try {
+            // Validate input
+            if (signupRequest.getEmail() == null || signupRequest.getEmail().isEmpty()) {
+                response.setSuccess(false);
+                response.setMessage("Email is required");
+                return response;
+            }
+
+            if (signupRequest.getPassword() == null || signupRequest.getPassword().length() < 6) {
+                response.setSuccess(false);
+                response.setMessage("Password must be at least 6 characters");
+                return response;
+            }
+
+            if (signupRequest.getFullName() == null || signupRequest.getFullName().trim().isEmpty()) {
+                response.setSuccess(false);
+                response.setMessage("Full name is required");
+                return response;
+            }
+
+            // Check if user already exists
+            Optional<User> existingUser = authRepository.findByEmail(signupRequest.getEmail());
+            if (existingUser.isPresent()) {
+                response.setSuccess(false);
+                response.setMessage("User with this email already exists");
+                return response;
+            }
+
+            // Split full name into first and last name
+            String[] nameParts = signupRequest.getFullName().trim().split(" ", 2);
+            String firstName = nameParts[0];
+            String lastName = nameParts.length > 1 ? nameParts[1] : "";
+
+            // Hash password using BCrypt
+            String hashedPassword = passwordEncoder.encode(signupRequest.getPassword());
+
+            // Create new user
+            User newUser = new User();
+            newUser.setEmail(signupRequest.getEmail());
+            newUser.setPassword(hashedPassword);
+            newUser.setFirstName(firstName);
+            newUser.setLastName(lastName);
+            newUser.setRole("USER");
+            newUser.setActive(true);
+
+            // Save user to database
+            User savedUser = authRepository.save(newUser);
+
+            // Generate JWT token for new user
+            String token = generateJwtToken(savedUser);
+
+            // Build successful response
+            response.setSuccess(true);
+            response.setMessage("User registered successfully");
+            response.setToken(token);
+
+            SignupResponse.UserDto userDto = new SignupResponse.UserDto();
+            userDto.setId(savedUser.getId());
+            userDto.setEmail(savedUser.getEmail());
+            userDto.setFullName(savedUser.getFirstName() + " " + savedUser.getLastName());
+            userDto.setRole(savedUser.getRole());
+            response.setUser(userDto);
+
+        } catch (Exception e) {
+            response.setSuccess(false);
+            response.setMessage("Signup failed: " + e.getMessage());
+        }
+
+        return response;
+    }
     private String generateJwtToken(User user) {
         byte[] keyBytes = Decoders.BASE64.decode(secretString);
         SecretKey secretKey = Keys.hmacShaKeyFor(keyBytes);
